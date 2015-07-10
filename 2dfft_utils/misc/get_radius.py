@@ -12,13 +12,12 @@
            would increase program speed.
     Author: Erik Monson
     
-    Last modified May 29, 2015
+    Last modified July 10, 2015
 '''
 #!/usr/bin/env/ python
 import numpy as np
 from astropy.io import fits
 import glob
-import math
 import sys
 
 # Begin subroutine Radius
@@ -30,7 +29,7 @@ def Radius(filename, CENTER_X, CENTER_Y):
     for i in range(Y_SIZE):
         for j in range(X_SIZE):
             if img_data[i][j] != 0: #If the pixel at (j,i) isn't black ...
-                distance = int(math.ceil(math.sqrt((j-CENTER_X)**2+(i-CENTER_Y)**2))) #find the distance from the center to the pixel at (j,i) ...
+                distance = int(np.ceil(np.sqrt((j-CENTER_X)**2+(i-CENTER_Y)**2))) #find the distance from the center to the pixel at (j,i) ...
                 if distance > radius: #and if it's greater than the current record ...
                     radius = distance #set the distance as the new record.
     return radius

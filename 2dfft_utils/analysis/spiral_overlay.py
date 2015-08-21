@@ -85,27 +85,9 @@ plt.axis([0,int(len(galaxy_image)),0,int(len(galaxy_image))]) #initial axis boun
 fig.text(0.52,0.92,"Image: "+gal_file, fontsize='14',ha='center')
 
 #-----------------------------Spiral arms-----------------------------
-#pitch_rad = pitch_angle*np.pi/180
-#b = np.tan(abs(pitch_rad))
-
-#Find the diameter of the galaxy system
-#gal_pixel_diameter = float(len(galaxy_image))
-
-#Find the radius of the galaxy image
-#global gal_pixel_radius = gal_pixel_diameter/2
 
 #Define the maximum angle that the arms will wind through
 theta_max = 3*np.pi
-
-#Find the scale factor a by assuming a max radius slightly larger than the actual image radius
-#global a = (1.15*gal_pixel_radius)/np.exp(b*theta_max)
-
-#Convert the rotation angle to radians
-#rotation_angle_rad = float(rotation_angle)*np.pi/180
-
-#Create an array for theta values. For small pitch angles (<15 degrees), it may be a good
-#   idea to increase the radians to more than 6.
-#theta = np.arange(0,theta_max,0.10)
 
 def SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle = 0.0,colorscale_option = 'n', chirality = 'CCW'):
 
@@ -121,12 +103,19 @@ def SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle = 0.0,colorsca
 
     pitch_rad = pitch_angle*np.pi/180
     b = np.tan(abs(pitch_rad))
-
+    
+    #Find the diameter and radius of the galaxy image
     gal_pixel_diameter = float(len(galaxy_image))
     gal_pixel_radius = gal_pixel_diameter/2
-
+    
+    #Find the scale factor a by assuming a max radius slightly larger than the actual image radius
     a = (1.15*gal_pixel_radius)/np.exp(b*theta_max)
+    
+    #Convert the rotation angle to radians
     rotation_angle_rad = float(rotation_angle)*np.pi/180
+    
+    #Create an array for theta values. For small pitch angles (<15 degrees), it may be a good
+    #   idea to increase the radians to more than 6.
     theta = np.arange(0,theta_max,0.10)
 
     # Plot each spiral arm.

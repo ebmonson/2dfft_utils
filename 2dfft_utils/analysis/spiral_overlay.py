@@ -46,19 +46,27 @@
                         on the right side of the plot. Defaults to 2 arms.
                     
     REVISION HISTORY:   Written by J.E. Berlanga Medina, modified by E. Monson.
-                        Last edited August 21, 2015.
+                        Last edited August 31, 2015.
+                        
+TODO - Test if separating the image display and spiral drawing tasks is possible and reduces input lag.
 '''
 
 #-----------------------------Program begins----------------------------
 #!/usr/bin/python
 from pylab import *
 import numpy as np
+import glob
 from astropy.io import fits
 from matplotlib.colors import LogNorm
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button, RadioButtons
 import sys
 
+#-----------------------------Default/initial values-----------------------------
+DEFAULT_ARMS = 6    #Between 1 and 6, inclusive
+DEFAULT_PITCH = -42.0   #Between about -89.12 and 89.12 Anything bigger causes overflow issues.
+DEFAULT_ROTATION = -2.0 #Between -180.0 and 180.0, inclusive
+DEFAULT_COLORSCALE = 'y' #n is linear, y is logarithmic
 #-----------------------------Command line input-----------------------------
 if len(sys.argv) != 1:
     if sys.argv[1][-4:] == ".fit":
@@ -67,7 +75,12 @@ if len(sys.argv) != 1:
         print "Usage: python spiral_overlay.py <filename>"
         print "<filename> must be a .fit file."
         sys.exit()
+    #endif
 else:
+    print "Available images: "
+    for filename in glob.glob("*.fit"):
+        print filename
+    #End of loop
     gal_file = str(raw_input("\nEnter filename for galaxy image.\n> "))
 #endif
 
@@ -81,7 +94,6 @@ except IOError:
 fig, ax = plt.subplots()
 plt.subplots_adjust(left=0.15,bottom=0.25) #set placement of plot
 plt.axis([0,int(len(galaxy_image)),0,int(len(galaxy_image))]) #initial axis bounds set by this array
-#title("Image: "+gal_file+"  |  Pitch: "+str(pitch_angle)+" deg.")
 fig.text(0.52,0.92,"Image: "+gal_file, fontsize='14',ha='center')
 
 #-----------------------------Spiral arms-----------------------------
@@ -95,19 +107,20 @@ def SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle = 0.0,colorsca
         ax.imshow(galaxy_image,cmap='gray',origin='lower')
     elif str(colorscale_option) == 'y':
         # seismic & Greys recommended for images faint in log scale.
-        #ax.imshow(galaxy_image,cmap='Greys',norm=LogNorm(),origin='lower')
+        ax.imshow(galaxy_image,cmap='Greys',norm=LogNorm(),origin='lower')
         #ax.imshow(galaxy_image,cmap='seismic',norm=LogNorm(),origin='lower')
         #ax.imshow(galaxy_image,cmap='YlOrBr',norm=LogNorm(),origin='lower')
-        ax.imshow(galaxy_image,cmap='gist_yarg',norm=LogNorm(),origin='lower')
+        #ax.imshow(galaxy_image,cmap='gist_yarg',norm=LogNorm(),origin='lower')
     #endif
 
+    #Convert the pitch angle to radians
     pitch_rad = pitch_angle*np.pi/180
     b = np.tan(abs(pitch_rad))
-    
+
     #Find the diameter and radius of the galaxy image
     gal_pixel_diameter = float(len(galaxy_image))
     gal_pixel_radius = gal_pixel_diameter/2
-    
+
     #Find the scale factor a by assuming a max radius slightly larger than the actual image radius
     a = (1.15*gal_pixel_radius)/np.exp(b*theta_max)
     
@@ -131,27 +144,34 @@ def SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle = 0.0,colorsca
         y = (a*np.sin(theta+phase)*np.exp(b*theta) + gal_pixel_radius)
         #Plot the parametrically defined spiral
         ax.plot(x,y)
-        #End of loop
+    #End of loop
 #End subroutine
 
-#These are default values only
-rotation_angle = 0.0
-colorscale_option = 'n'
-pitch_angle = 25.0
-arm_number = 2
-if pitch_angle > 0:
+#Initialize the overlay variables with the default values
+rotation_angle = DEFAULT_ROTATION
+colorscale_option = DEFAULT_COLORSCALE
+pitch_angle = DEFAULT_PITCH
+arm_number = DEFAULT_ARMS
+#The flags here control which button starts out pressed
+if pitch_angle >= 0:
     chirality = 'CCW'
     chir_flag = 0
 elif pitch_angle < 0:
-    chirality = 'CW'
+    chirality = 'CW'    #If the pitch is negative, flip the chirality and drop the sign
     chir_flag = 1
+    pitch_angle = np.abs(pitch_angle)
+#endif
+if colorscale_option == 'n':
+    colorscale_flag = 0
+elif colorscale_option == 'y':
+    colorscale_flag = 1
 #endif
 
-SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option)
+SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality)
 
 #-----------------------------Basic GUI elements-----------------------------
 #Define a consistent UI color
-axcolor = '#FFFFAD'
+axcolor = '#FFFFFF'
 
 #Define a new "axis" for the slider
 rot_ax = plt.axes([0.20, 0.12, 0.65, 0.03], axisbg=axcolor)
@@ -170,7 +190,7 @@ pitch_slider = Slider(pitch_ax, 'Pitch', 0.001, 89.125, valinit=pitch_angle)
 def Update(val):
     #Clear the axes
     ax.cla()
-    global rotation_angle #This is probably bad style
+    global rotation_angle
     rotation_angle = rot_slider.val
     global pitch_angle
     pitch_angle = pitch_slider.val
@@ -198,7 +218,7 @@ reset_button.on_clicked(Reset)
 
 #Initialize a set of radio buttons for colorscale
 log_ax = plt.axes([0.025, 0.60, 0.15, 0.15], axisbg=axcolor)
-log_radio = RadioButtons(log_ax, ('linear','log'), active=0)
+log_radio = RadioButtons(log_ax, ('linear','log'), active=colorscale_flag)
 fig.text(0.10,0.76,"Scale", fontsize='12',ha='center')
 
 #Subroutine ScaleChange
@@ -235,7 +255,7 @@ chir_radio.on_clicked(ChirChange)
 
 #Initialize a set of radio buttons for the number of arms
 arm_ax = plt.axes([0.8255, 0.50, 0.12, 0.25], axisbg=axcolor)
-arm_radio = RadioButtons(arm_ax, ('1','2','3','4','5','6'), active=1)
+arm_radio = RadioButtons(arm_ax, ('1','2','3','4','5','6'), active=(DEFAULT_ARMS-1))
 fig.text(0.8855,0.76,"Arm Number", fontsize='12',ha='center')
 
 #Subroutine ArmChange

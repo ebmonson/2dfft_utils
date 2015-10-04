@@ -732,12 +732,21 @@ Automated Method
 
   * If more than one region gives good results, and those regions are separated by relatively small (~a few pixels) breaks due to noise, you can combine them.
 
-5. Check your results with ``overlay-test_cmap-scales.py``.
+5. Check your results with ``spiral_overlay.py``::
 
-	.. code-block::
+        python spiral_overlay.py <filename>
 
-		python overlay-test_cmap-scales.py
+or::
 
-  You will be prompted for input.
+        python spiral_overlay.py
 
-  You can save the image by clicking on the ``Save`` button (shaped like a floppy disk) in the window that pops up.
+where ``<filename>`` is a ``.fit`` or ``.fits`` file. If a filename is not passed as a command line argument,
+the program will prompt for one.
+
+A GUI window will appear with options to adjust the pitch angle, rotation, number of arms and chirality of
+the overlay, along with the colorscale of the image (linear, logarithmic with grey colormap, or logarithmic
+with Seismic colormap).
+
+The overlay can be saved by clicking the ``Save`` icon in the lower toolbar.
+
+Default overlay and colormap options can be edited by modifying the constants at the top of the source file.

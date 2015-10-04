@@ -3,16 +3,15 @@
     Purpose: Automates the process of finding the radii of simulation images. Uses numpy and astropy.
     Inputs:  all_centers.txt (the output from get_center.py) and all FITS images in the working directory
     Outputs: r_max.txt, a list of the galaxies' radii in the same order as all_centers.txt
-    Notes: Line 28 in the Radius function removes the scales superimposed on the image from the calculation.
+    Notes: Line 26 in the Radius function removes the scales superimposed on the image from the calculation.
            You may need to modify the slice indices, depending on whether or not your image has scales and 
            where they are located.
-           It is best to run this script from a directory containing a complete set of simulation images (0.000 - 3.000 Gyr).
-           Otherwise, the entries in r_max.txt will not line up with those in all_centers.txt
-           It is not strictly necessary to loop over the entire image; assuming symmetry and looping over a smaller part 
+           It is reccomended to use this script in conjunction with the get_center.py, since this script takes an input file
+           formatted in the same way as the output from get_center.py.
+           While you can use get_radius.py in isolation, if you use it in conjunction with the other scripts here, you can't add/remove images in
+           between steps (i.e., you must use the same images & corresponding script output from beginning to end).
+           It is not strictly necessary to loop over the entire image; assuming symmetry and looping over a smaller part
            would increase program speed.
-    Author: Erik Monson
-    
-    Last modified July 10, 2015
 '''
 #!/usr/bin/env/ python
 import numpy as np

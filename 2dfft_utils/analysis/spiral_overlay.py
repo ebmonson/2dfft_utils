@@ -30,6 +30,9 @@
                         http://matplotlib.org/examples/color/colormaps_reference.html
     
                         Recommended cmap options are included as comments.
+                        
+                        It is recommended that you use cropped images with this program. There
+                        is a marked decrease in performance as image size increases.
                     
                         Rotation angle and pitch can be changed while the program is running
                         using the sliders below the plot. The reset button initializes the
@@ -44,11 +47,6 @@
                         
                         Arm number (corresponding to mode) can be changed with the radio buttons
                         on the right side of the plot. Defaults to 2 arms.
-                    
-    REVISION HISTORY:   Written by J.E. Berlanga Medina, modified by E. Monson.
-                        Last edited August 31, 2015.
-                        
-TODO - Test if separating the image display and spiral drawing tasks is possible and reduces input lag.
 '''
 
 #-----------------------------Program begins----------------------------
@@ -63,22 +61,22 @@ from matplotlib.widgets import Slider, Button, RadioButtons
 import sys
 
 #-----------------------------Default/initial values-----------------------------
-DEFAULT_ARMS = 6    #Between 1 and 6, inclusive
-DEFAULT_PITCH = -42.0   #Between about -89.12 and 89.12 Anything bigger causes overflow issues.
-DEFAULT_ROTATION = -2.0 #Between -180.0 and 180.0, inclusive
-DEFAULT_COLORSCALE = 'y' #n is linear, y is logarithmic
+DEFAULT_ARMS = 2    #Between 1 and 6, inclusive
+DEFAULT_PITCH = 23.0  #Between about -89.12 and 89.12 Anything bigger causes overflow issues.
+DEFAULT_ROTATION = 0.0 #Between -180.0 and 180.0, inclusive
+DEFAULT_COLORSCALE = 'n' #n is linear, yg is logarithmic grey scale, ys is logarithmic seismic scale
 #-----------------------------Command line input-----------------------------
 if len(sys.argv) != 1:
-    if sys.argv[1][-4:] == ".fit":
+    if sys.argv[1][-4:] == ".fit" or sys.argv[1][-5:] == ".fits":
         gal_file = sys.argv[1]
     else:
         print "Usage: python spiral_overlay.py <filename>"
-        print "<filename> must be a .fit file."
+        print "<filename> must be a FITS file."
         sys.exit()
     #endif
 else:
     print "Available images: "
-    for filename in glob.glob("*.fit"):
+    for filename in (glob.glob("*.fit") + glob.glob("*.fits")):
         print filename
     #End of loop
     gal_file = str(raw_input("\nEnter filename for galaxy image.\n> "))
@@ -105,12 +103,10 @@ def SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle = 0.0,colorsca
 
     if str(colorscale_option)=='n':
         ax.imshow(galaxy_image,cmap='gray',origin='lower')
-    elif str(colorscale_option) == 'y':
-        # seismic & Greys recommended for images faint in log scale.
+    elif str(colorscale_option) == 'yg':
         ax.imshow(galaxy_image,cmap='Greys',norm=LogNorm(),origin='lower')
-        #ax.imshow(galaxy_image,cmap='seismic',norm=LogNorm(),origin='lower')
-        #ax.imshow(galaxy_image,cmap='YlOrBr',norm=LogNorm(),origin='lower')
-        #ax.imshow(galaxy_image,cmap='gist_yarg',norm=LogNorm(),origin='lower')
+    elif str(colorscale_option) == 'ys':
+        ax.imshow(galaxy_image,cmap='seismic',norm=LogNorm(),origin='lower')
     #endif
 
     #Convert the pitch angle to radians
@@ -163,8 +159,10 @@ elif pitch_angle < 0:
 #endif
 if colorscale_option == 'n':
     colorscale_flag = 0
-elif colorscale_option == 'y':
+elif colorscale_option == 'yg':
     colorscale_flag = 1
+elif colorscale_option == 'ys':
+    colorscale_flag = 2
 #endif
 
 SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality)
@@ -177,10 +175,10 @@ axcolor = '#FFFFFF'
 rot_ax = plt.axes([0.20, 0.12, 0.65, 0.03], axisbg=axcolor)
 
 #Slider ranges from -180..180, initialized at the user's value (default 0.0).
-rot_slider = Slider(rot_ax, 'Rotation', -180.0, 180.0, valinit=rotation_angle)
+rot_slider = Slider(rot_ax, 'Rotation angle', -180.0, 180.0, valinit=rotation_angle)
 
 pitch_ax = plt.axes([0.20, 0.08, 0.65,0.03], axisbg=axcolor)
-pitch_slider = Slider(pitch_ax, 'Pitch', 0.001, 89.125, valinit=pitch_angle)
+pitch_slider = Slider(pitch_ax, 'Pitch angle', 0.001, 89.125, valinit=pitch_angle)
 
 #Subroutine update
 #   Define a set of actions to take when the slider is modified
@@ -218,8 +216,8 @@ reset_button.on_clicked(Reset)
 
 #Initialize a set of radio buttons for colorscale
 log_ax = plt.axes([0.025, 0.60, 0.15, 0.15], axisbg=axcolor)
-log_radio = RadioButtons(log_ax, ('linear','log'), active=colorscale_flag)
-fig.text(0.10,0.76,"Scale", fontsize='12',ha='center')
+log_radio = RadioButtons(log_ax, ('linear','log grey', 'log seismic'), active=colorscale_flag)
+fig.text(0.10,0.76,"Colorscale", fontsize='12',ha='center')
 
 #Subroutine ScaleChange
 #   Allow the user to swap between linear/log scales on the fly
@@ -227,8 +225,10 @@ def ScaleChange(label):
     global colorscale_option
     if label == 'linear':
         colorscale_option = 'n'
-    elif label == 'log':
-        colorscale_option = 'y'
+    elif label == 'log grey':
+        colorscale_option = 'yg'
+    elif label == 'log seismic':
+        colorscale_option = 'ys'
     ax.cla()
     SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality)
     fig.canvas.draw_idle()
@@ -256,7 +256,7 @@ chir_radio.on_clicked(ChirChange)
 #Initialize a set of radio buttons for the number of arms
 arm_ax = plt.axes([0.8255, 0.50, 0.12, 0.25], axisbg=axcolor)
 arm_radio = RadioButtons(arm_ax, ('1','2','3','4','5','6'), active=(DEFAULT_ARMS-1))
-fig.text(0.8855,0.76,"Arm Number", fontsize='12',ha='center')
+fig.text(0.8855,0.76,"Number of Arms", fontsize='12',ha='center')
 
 #Subroutine ArmChange
 #   Allow the user to change the number of overlaid arms on the fly

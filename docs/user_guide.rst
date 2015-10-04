@@ -365,8 +365,29 @@ Automated Method
 ----------------
 
 .. note::
+        Script located in ``2dfft_utils/misc/get_radius.py``
 
-	Script not yet in code base.
+----
+
+1. Open the terminal and cd to the directory containing your fits files.
+
+2. Place ``get_center.py`` in this directory and run it to generate a text file called ``all_centers.txt``.
+
+.. note::
+
+        If you are not using ``get_center.py`` to find the image centers but wish to use this script, you will
+        need to place your coordinates in a file formatted as follows.::
+
+                <BaseName1>   <Xcoord>  <Ycoord>
+                <BaseName2>   <Xcoord>  <Ycoord>
+
+        and so on, where the "BaseName" refers to the filename without extension.
+
+3. Place ``get_radius.py`` in the directory and run the script.::
+
+                python get_radius.py
+
+4. The script will generate a file called ``r_max.txt``, which contains the radii of the images in the same order that they appear in ``all_centers.txt``.
 
 ----
 
@@ -500,9 +521,9 @@ Automated Method
 
 .. note::
 
-	Script is located at ``2dfft_utils/fit2txt_all.cl``.
+	IRAF cl script is located at ``2dfft_utils/misc/fit2txt_all.cl``.
 
-	Script will be updated to one in Python.
+	Python script is located at ``2dfft_utils/misc/fits_to_text.py``.
 
 
 .. _running-2dfft:

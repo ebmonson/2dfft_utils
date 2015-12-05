@@ -9,7 +9,7 @@
                         FITS filename can be passed as a command line argument,
                         but the program will prompt for it if it isn't.
     
-    OUTPUT:             Interactive plot in python window.
+    OUTPUT:             Interactive plot in MatPlotLib window.
     
     NOTES:              Uses pylab (including matplotlib and numpy) and astropy.
                         All necessary libraries included in Ureka package.
@@ -24,29 +24,26 @@
                             tan(phi) = b
                             phi = pitch angle
     
-                        Edit theta_max, title, origin of the plot (imshow)
-                        & the colormap (imshow(...,cmap=..) as needed.
-                        Colormaps schemes available can be seen at:
-                        http://matplotlib.org/examples/color/colormaps_reference.html
-    
-                        Recommended cmap options are included as comments.
                         
-                        It is recommended that you use cropped images with this program. There
-                        is a marked decrease in performance as image size increases.
+                        It is recommended that you use cropped images with this program. Image
+                        and spiral plotting slows down dramatically as image size increases.
                     
                         Rotation angle and pitch can be changed while the program is running
                         using the sliders below the plot. The reset button initializes the
-                        slider to default values (0.0 for rotation, 25.0 for pitch).
+                        slider to default values (0.0 for rotation, 20.0 for pitch).
                         
                         Scale can be swapped between logarithmic and linear modes with the radio
-                        buttons on the left side of the plot. Defaults to linear scale.
+                        buttons on the left side of the plot. There are two colormaps for the lograthmic
+                        scale: Seismic and Greyscale. Defaults to linear scale.
                         
-                        Chirality (corresponding to the sign of the pitch angle: CCW = +, CW = -)
-                        can be changed with the second set of radio buttons on the left side of
-                        the plot. Defaults to CCW.
+                        Chirality (corresponding to the sign of the pitch angle: CCW = -, CW = +)
+                        can be changed with the second set of radio buttons on the right side of
+                        the plot. Defaults to positive chirality.
                         
                         Arm number (corresponding to mode) can be changed with the radio buttons
                         on the right side of the plot. Defaults to 2 arms.
+                        
+                        Default values can be changed in the block of constants below.
 '''
 
 #-----------------------------Program begins----------------------------
@@ -62,7 +59,7 @@ import sys
 
 #-----------------------------Default/initial values-----------------------------
 DEFAULT_ARMS = 2    #Between 1 and 6, inclusive
-DEFAULT_PITCH = 23.0  #Between about -89.12 and 89.12 Anything bigger causes overflow issues.
+DEFAULT_PITCH = 20.0  #Between about 0.0 and 45.0 degrees.
 DEFAULT_ROTATION = 0.0 #Between -180.0 and 180.0, inclusive
 DEFAULT_COLORSCALE = 'n' #n is linear, yg is logarithmic grey scale, ys is logarithmic seismic scale
 #-----------------------------Command line input-----------------------------
@@ -90,16 +87,17 @@ except IOError:
     sys.exit()
 #-----------------------------Setup for plot-----------------------------
 fig, ax = plt.subplots()
-plt.subplots_adjust(left=0.15,bottom=0.25) #set placement of plot
-plt.axis([0,int(len(galaxy_image)),0,int(len(galaxy_image))]) #initial axis bounds set by this array
-fig.text(0.52,0.92,"Image: "+gal_file, fontsize='14',ha='center')
+plt.subplots_adjust(left= 0.15,bottom= 0.25) #set placement of plot
+plt.tick_params(axis= 'both',which= 'both',bottom= 'off',top= 'off',left= 'off',right= 'off',labelbottom= 'off',labelleft= 'off')
+plt.axis([0, int(len(galaxy_image)), 0, int(len(galaxy_image))]) #initial axis bounds set by this array
+fig.text(0.52, 0.92, "Image: "+gal_file, fontsize= '14', ha= 'center')
 
 #-----------------------------Spiral arms-----------------------------
 
 #Define the maximum angle that the arms will wind through
 theta_max = 3*np.pi
 
-def SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle = 0.0,colorscale_option = 'n', chirality = 'CCW'):
+def SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle = 0.0,colorscale_option = 'n', chirality = 'CCW', line_color = ''):
 
     if str(colorscale_option)=='n':
         ax.imshow(galaxy_image,cmap='gray',origin='lower')
@@ -139,7 +137,13 @@ def SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle = 0.0,colorsca
         #End of if statements.
         y = (a*np.sin(theta+phase)*np.exp(b*theta) + gal_pixel_radius)
         #Plot the parametrically defined spiral
-        ax.plot(x,y)
+        l, = ax.plot(x,y,linewidth=2.0)
+        if line_color == 'red':
+            plt.setp(l,color='red')
+        elif line_color == 'black':
+            plt.setp(l,color='black')
+        elif line_color == 'white':
+            plt.setp(l,color='white')
     #End of loop
 #End subroutine
 
@@ -148,6 +152,7 @@ rotation_angle = DEFAULT_ROTATION
 colorscale_option = DEFAULT_COLORSCALE
 pitch_angle = DEFAULT_PITCH
 arm_number = DEFAULT_ARMS
+line_color = ''
 #The flags here control which button starts out pressed
 if pitch_angle >= 0:
     chirality = 'CCW'
@@ -165,11 +170,11 @@ elif colorscale_option == 'ys':
     colorscale_flag = 2
 #endif
 
-SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality)
+SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality,line_color)
 
 #-----------------------------Basic GUI elements-----------------------------
 #Define a consistent UI color
-axcolor = '#FFFFFF'
+axcolor = 'white'
 
 #Define a new "axis" for the slider
 rot_ax = plt.axes([0.20, 0.12, 0.65, 0.03], axisbg=axcolor)
@@ -178,7 +183,7 @@ rot_ax = plt.axes([0.20, 0.12, 0.65, 0.03], axisbg=axcolor)
 rot_slider = Slider(rot_ax, 'Rotation angle', -180.0, 180.0, valinit=rotation_angle)
 
 pitch_ax = plt.axes([0.20, 0.08, 0.65,0.03], axisbg=axcolor)
-pitch_slider = Slider(pitch_ax, 'Pitch angle', 0.001, 89.125, valinit=pitch_angle)
+pitch_slider = Slider(pitch_ax, 'Pitch angle', 0.001, 45.00, valinit=pitch_angle)
 
 #Subroutine update
 #   Define a set of actions to take when the slider is modified
@@ -192,7 +197,7 @@ def Update(val):
     rotation_angle = rot_slider.val
     global pitch_angle
     pitch_angle = pitch_slider.val
-    SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality)
+    SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality,line_color)
     #Force the buffer to flip
     fig.canvas.draw_idle()
 #End subroutine
@@ -201,11 +206,11 @@ rot_slider.on_changed(Update)
 pitch_slider.on_changed(Update)
 
 #Define a new "axis" for the reset button
-reset_ax = plt.axes([0.47, 0.03, 0.1, 0.04])
-reset_button = Button(reset_ax, 'Reset', color=axcolor, hovercolor='0.975')
+reset_ax = plt.axes([0.47, 0.03, 0.15, 0.04])
+reset_button = Button(reset_ax, 'Reset sliders', color=axcolor, hovercolor='lightsteelblue')
 
 #Subroutine reset
-#   Define actions to take when button is pressed
+#   Define actions to take when  resetbutton is pressed
 def Reset(event):
     #Reset sliders to initial values
     rot_slider.reset()
@@ -214,8 +219,22 @@ def Reset(event):
 
 reset_button.on_clicked(Reset)
 
+#Define a new axis for the save button
+save_ax = plt.axes([0.80, 0.03, 0.1, 0.04])
+save_button = Button(save_ax, 'Save', color=axcolor, hovercolor='lightsteelblue')
+
+#Subroutine save
+#   Define actions to take when save button is pressed
+def Save(event):
+    #Find the extent of the subplot that shows the image
+    extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+    fig.savefig(gal_file+'_'+str(pitch_angle)+'degrees'+'.png', bbox_inches=extent)
+#End subroutine
+
+save_button.on_clicked(Save)
+
 #Initialize a set of radio buttons for colorscale
-log_ax = plt.axes([0.025, 0.60, 0.15, 0.15], axisbg=axcolor)
+log_ax = plt.axes([0.025, 0.60, 0.17, 0.15], axisbg=axcolor)
 log_radio = RadioButtons(log_ax, ('linear','log grey', 'log seismic'), active=colorscale_flag)
 fig.text(0.10,0.76,"Colorscale", fontsize='12',ha='center')
 
@@ -230,24 +249,27 @@ def ScaleChange(label):
     elif label == 'log seismic':
         colorscale_option = 'ys'
     ax.cla()
-    SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality)
+    SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality,line_color)
     fig.canvas.draw_idle()
 #End subroutine
 
 log_radio.on_clicked(ScaleChange)
 
 #Initialize a set of radio buttons for chirality
-chir_ax = plt.axes([0.025, 0.40, 0.15, 0.15], axisbg=axcolor)
-chir_radio = RadioButtons(chir_ax, ('CCW','CW'), active=chir_flag)
-fig.text(0.10,0.56,"Chirality", fontsize='12',ha='center')
+chir_ax = plt.axes([0.8155, 0.30, 0.15, 0.15], axisbg=axcolor)
+chir_radio = RadioButtons(chir_ax, ('CCW (-)','CW (+)'), active=chir_flag)
+fig.text(0.8855,0.46,"Chirality", fontsize='12',ha='center')
 
 #Subroutine ChirChange
 #   Allow the user to change the overlay's chirality on the fly
 def ChirChange(label):
     global chirality
-    chirality = label
+    if label == 'CCW (-)':
+        chirality = 'CCW'
+    elif label == 'CW (+)':
+        chirality = 'CW'
     ax.cla()
-    SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality)
+    SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality,line_color)
     fig.canvas.draw_idle()
 #End subroutine
 
@@ -264,12 +286,28 @@ def ArmChange(label):
     global arm_number
     arm_number = int(label)
     ax.cla()
-    SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality)
+    SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality,line_color)
     fig.canvas.draw_idle()
 #End subroutine
 
 arm_radio.on_clicked(ArmChange)
 
+#Initialize a set of radio buttons for the line color
+color_ax = plt.axes([0.032, 0.30, 0.12, 0.25], axisbg=axcolor)
+color_radio = RadioButtons(color_ax, ('default','red','black','white'), active=0)
+fig.text(0.10,0.56,"Line Color", fontsize='12',ha='center')
+
+#Subroutine ColorChange
+#   Allow the user to change the color of overlaid arms on the fly
+def ColorChange(label):
+    global line_color
+    line_color = label
+    ax.cla()
+    SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality,line_color)
+    fig.canvas.draw_idle()
+#End subroutine
+
+color_radio.on_clicked(ColorChange)
 
 plt.show()
 

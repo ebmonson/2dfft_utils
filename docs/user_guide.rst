@@ -747,6 +747,7 @@ A GUI window will appear with options to adjust the pitch angle, rotation, numbe
 the overlay, along with the colorscale of the image (linear, logarithmic with grey colormap, or logarithmic
 with Seismic colormap).
 
-The overlay can be saved by clicking the ``Save`` icon in the lower toolbar.
+The color of the overlaid arms can be changed from default multicolor to black, white, or red.
 
-Default overlay and colormap options can be edited by modifying the constants at the top of the source file.
+The overlay can be saved by clicking the floppy disk icon in the lower toolbar, which will save the entire window, or the ``Save`` button
+at the lower right of the image, which will save only the central overlay as a ``.png`` tagged with the pitch angle and image name.

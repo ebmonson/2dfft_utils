@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 '''
     spiral_overlay.py
     
@@ -26,15 +28,18 @@
     
                         
                         It is recommended that you use cropped images with this program. Image
-                        and spiral plotting slows down dramatically as image size increases.
+                        plotting slows down dramatically as image size increases.
                     
                         Rotation angle and pitch can be changed while the program is running
-                        using the sliders below the plot. The reset button initializes the
-                        slider to default values (0.0 for rotation, 20.0 for pitch).
+                        using the sliders below the plot. For strongly barred galaxies, the minimum 
+                        polar angle can be set with the slider marked minimum theta. The reset button 
+                        initializes the slider to default values (0.0 for rotation, 20.0 for pitch, and 
+                        pi for min. theta).
                         
                         Scale can be swapped between logarithmic and linear modes with the radio
-                        buttons on the left side of the plot. There are two colormaps for the lograthmic
-                        scale: Seismic and Greyscale. Defaults to linear scale.
+                        buttons on the left side of the plot. There are two colormaps for the logarithmic
+                        scale: Seismic (diverging) and Greyscale (sequential). Defaults to linear scale,
+                        which you may want to change if you're dealing with faint real images.
                         
                         Chirality (corresponding to the sign of the pitch angle: CCW = -, CW = +)
                         can be changed with the second set of radio buttons on the right side of
@@ -44,15 +49,17 @@
                         on the right side of the plot. Defaults to 2 arms.
                         
                         Default values can be changed in the block of constants below.
+                        
+                        The overlay can be saved as a .png (without all the sliders and buttons) by pressing
+                        the save button below the sliders.
 '''
 
 #-----------------------------Program begins----------------------------
-#!/usr/bin/python
 from pylab import *
 import numpy as np
 import glob
 from astropy.io import fits
-from matplotlib.colors import LogNorm
+from matplotlib.colors import LogNorm, Normalize
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button, RadioButtons
 import sys
@@ -61,129 +68,241 @@ import sys
 DEFAULT_ARMS = 2    #Between 1 and 6, inclusive
 DEFAULT_PITCH = 20.0  #Between about 0.0 and 45.0 degrees.
 DEFAULT_ROTATION = 0.0 #Between -180.0 and 180.0, inclusive
+DEFAULT_THETA_MIN = np.pi #Between 0.0 and 3*pi
 DEFAULT_COLORSCALE = 'n' #n is linear, yg is logarithmic grey scale, ys is logarithmic seismic scale
+line_color = '' #Options: '' for default, 'red', 'black', 'white'
+
+class Spiral():
+    """
+        Spiral
+        A class interface to hold parameters related to the spiral overlay.
+    """
+
+    def __init__(self, num_arms, pitch, chirality, rotation, theta_min, color):
+        self.num_arms = num_arms
+        self.pitch = pitch
+        self.chirality = chirality
+        self.rotation = rotation
+        self.theta_min = theta_min
+        self.color = color
+        return
+    #end subroutine
+
+    def setNumArms(self, num_arms):
+        self.num_arms = num_arms
+        return
+    #end subroutine
+
+    def setPitch(self, pitch):
+        self.pitch = pitch
+        return
+    #end subroutine
+    
+    def setChirality(self, chirality):
+        self.chirality = chirality
+        return
+    #end subroutine
+
+    def setRotation(self, rotation):
+        self.rotation = rotation
+        return
+    #end subroutine
+
+    def setTheta(self, theta_min):
+        self.theta_min = theta_min
+        return
+    #end subroutine
+
+    def setColor(self, color):
+        self.color = color
+        return
+    #end subroutine
+
+#end class definition
+
+class Image():
+    """
+        Image
+        A class interface to hold data from and related to the galaxy image being 
+        overlaid.
+    """
+    def __init__(self, name):
+        self.name = name
+        return
+    #end subroutine
+
+    def setData(self, data):
+        self.data = data
+        return
+    #end subroutine
+
+    def setColorscale(self, colorscale):
+        self.colorscale = colorscale
+        return
+    #end subroutine
+
+#end class definition
+
 #-----------------------------Command line input-----------------------------
 if len(sys.argv) != 1:
     if sys.argv[1][-4:] == ".fit" or sys.argv[1][-5:] == ".fits":
-        gal_file = sys.argv[1]
-    else:
-        print "Usage: python spiral_overlay.py <filename>"
-        print "<filename> must be a FITS file."
+        gal_image = Image(sys.argv[1])
+    elif sys.argv[1] in ["-h","-H","--help"]:
+        print(__doc__)
         sys.exit()
-    #endif
+    else:
+        print("Could not parse command line argument")
+        print(__doc__)
+        sys.exit()
 else:
-    print "Available images: "
+    print "Available images in this directory: "
+    #If you're using python 3.5+ you can easily make this search subdirectories recursively
     for filename in (glob.glob("*.fit") + glob.glob("*.fits")):
         print filename
-    #End of loop
-    gal_file = str(raw_input("\nEnter filename for galaxy image.\n> "))
-#endif
+    gal_image = Image(str(raw_input("\nEnter filename for galaxy image.\n> ")))
 
 try:
     #pull the pixel values and save them as a uint8 numpy array
-    galaxy_image = fits.getdata(gal_file)
+    gal_image.setData(fits.getdata(gal_image.name))
 except IOError:
-    print "\nIOError: File not found. Check wd or filename and try again"
+    print "\nIOError: File not found. Check cwd or filename and try again"
     sys.exit()
+
 #-----------------------------Setup for plot-----------------------------
 fig, ax = plt.subplots()
-plt.subplots_adjust(left= 0.15,bottom= 0.25) #set placement of plot
-plt.tick_params(axis= 'both',which= 'both',bottom= 'off',top= 'off',left= 'off',right= 'off',labelbottom= 'off',labelleft= 'off')
-plt.axis([0, int(len(galaxy_image)), 0, int(len(galaxy_image))]) #initial axis bounds set by this array
-fig.text(0.52, 0.92, "Image: "+gal_file, fontsize= '14', ha= 'center')
+plt.subplots_adjust(left= 0.15, bottom= 0.20) #set placement of plot
+plt.tick_params(axis= 'both', which= 'both', bottom= 'off', top= 'off', left= 'off', right= 'off', labelbottom= 'off', labelleft= 'off')
+plt.axis([0, int(len(gal_image.data)), 0, int(len(gal_image.data))]) #initial axis bounds set by this array
+fig.text(0.52, 0.92, "Image: "+gal_image.name, fontsize= '14', ha= 'center')
+
+#-----------------------------Image handling-----------------------------
+gal_image.setColorscale(DEFAULT_COLORSCALE)
+
+if gal_image.colorscale == 'n':
+    colorscale_flag = 0
+elif gal_image.colorscale == 'yg':
+    colorscale_flag = 1
+elif gal_image.colorscale == 'ys':
+    colorscale_flag = 2
+
+#Subroutine ImagePlot
+#   A subroutine to handle image renormalization, color mapping, and display
+def ImagePlot(image):
+    if str(image.colorscale)=='n':
+        remap = Normalize()
+        remap.autoscale(image.data)
+        ax.imshow(image.data, cmap='gray', norm=remap, origin='lower')
+    elif str(image.colorscale) == 'yg':
+        remap = LogNorm()
+        remap.autoscale(image.data)
+        ax.imshow(image.data, cmap='gray', norm=remap, origin='lower')
+    elif str(image.colorscale) == 'ys':
+        remap = LogNorm()
+        remap.autoscale(image.data)
+        ax.imshow(image.data, cmap='seismic', norm=remap, origin='lower')
+#end subroutine
 
 #-----------------------------Spiral arms-----------------------------
 
-#Define the maximum angle that the arms will wind through
-theta_max = 3*np.pi
-
-def SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle = 0.0,colorscale_option = 'n', chirality = 'CCW', line_color = ''):
-
-    if str(colorscale_option)=='n':
-        ax.imshow(galaxy_image,cmap='gray',origin='lower')
-    elif str(colorscale_option) == 'yg':
-        ax.imshow(galaxy_image,cmap='Greys',norm=LogNorm(),origin='lower')
-    elif str(colorscale_option) == 'ys':
-        ax.imshow(galaxy_image,cmap='seismic',norm=LogNorm(),origin='lower')
-    #endif
-
+#Subroutine SpiralArms
+#   A subroutine to plot the spiral on top of the image.
+#   Takes an object of the Spiral class and an object of the Image class (see above)
+def SpiralArms(spiral, image):
+    
+    #Define the maximum angle that the arms will wind through
+    theta_max = 3*np.pi
+    
     #Convert the pitch angle to radians
-    pitch_rad = pitch_angle*np.pi/180
+    pitch_rad = spiral.pitch*np.pi/180
     b = np.tan(abs(pitch_rad))
-
+    
     #Find the diameter and radius of the galaxy image
-    gal_pixel_diameter = float(len(galaxy_image))
+    gal_pixel_diameter = float(len(image.data))
     gal_pixel_radius = gal_pixel_diameter/2
-
+    
     #Find the scale factor a by assuming a max radius slightly larger than the actual image radius
     a = (1.15*gal_pixel_radius)/np.exp(b*theta_max)
     
     #Convert the rotation angle to radians
-    rotation_angle_rad = float(rotation_angle)*np.pi/180
+    rotation_angle_rad = float(spiral.rotation)*np.pi/180
     
     #Create an array for theta values. For small pitch angles (<15 degrees), it may be a good
     #   idea to increase the radians to more than 6.
-    theta = np.arange(0,theta_max,0.10)
-
+    theta = np.arange(spiral.theta_min,theta_max,0.05)
+    
+    #Initialize numpy arrays for the coordinates
+    all_x = np.array([])
+    all_y = np.array([])
+    
     # Plot each spiral arm.
-    for i in range(0,arm_number):
+    for i in range(0,spiral.num_arms):
         #Add the rotation angle to the phase
-        phase=i*2*np.pi/arm_number + rotation_angle_rad
+        phase=i*2*np.pi/spiral.num_arms + rotation_angle_rad
         #Create arrays (implicit numpy arrays) for the x- & y-values using the theta array.
-        if chirality == 'CCW':
+        if spiral.chirality == 'CCW':
             x = (-a*np.cos(theta+phase)*np.exp(b*theta) + gal_pixel_radius)
-        elif chirality == 'CW':
+        elif spiral.chirality == 'CW':
             x = (a*np.cos(theta+phase)*np.exp(b*theta) + gal_pixel_radius)
-        #End of if statements.
+        
         y = (a*np.sin(theta+phase)*np.exp(b*theta) + gal_pixel_radius)
-        #Plot the parametrically defined spiral
-        l, = ax.plot(x,y,linewidth=2.0)
-        if line_color == 'red':
-            plt.setp(l,color='red')
-        elif line_color == 'black':
-            plt.setp(l,color='black')
-        elif line_color == 'white':
-            plt.setp(l,color='white')
-    #End of loop
+        all_x = np.append(all_x, x)
+        all_y = np.append(all_y, y)
+
+    return all_x, all_y
+
 #End subroutine
 
-#Initialize the overlay variables with the default values
-rotation_angle = DEFAULT_ROTATION
-colorscale_option = DEFAULT_COLORSCALE
-pitch_angle = DEFAULT_PITCH
-arm_number = DEFAULT_ARMS
-line_color = ''
+
 #The flags here control which button starts out pressed
-if pitch_angle >= 0:
+if DEFAULT_PITCH >= 0:
     chirality = 'CCW'
     chir_flag = 0
-elif pitch_angle < 0:
+    pitch = DEFAULT_PITCH
+elif DEFAULT_PITCH < 0:
     chirality = 'CW'    #If the pitch is negative, flip the chirality and drop the sign
     chir_flag = 1
-    pitch_angle = np.abs(pitch_angle)
-#endif
-if colorscale_option == 'n':
-    colorscale_flag = 0
-elif colorscale_option == 'yg':
-    colorscale_flag = 1
-elif colorscale_option == 'ys':
-    colorscale_flag = 2
-#endif
+    pitch = np.abs(DEFAULT_PITCH)
 
-SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality,line_color)
+#Instantiate a Spiral object
+overlay = Spiral(DEFAULT_ARMS, pitch, chirality, DEFAULT_ROTATION, DEFAULT_THETA_MIN, line_color)
+
+#Plot the image and overlay, saving the lines object for future modification
+ImagePlot(gal_image)
+x,y = SpiralArms(overlay, gal_image)
+overlay.lines, = ax.plot(x, y, '.', ms = 5.0)
+
+if overlay.color == 'red':
+    plt.setp(overlay.lines, color = 'red')
+elif overlay.color == 'black':
+    plt.setp(overlay.lines, color = 'black')
+elif overlay.color == 'white':
+    plt.setp(overlay.lines, color = 'white')
+else:
+    plt.setp(overlay.lines, color = 'blue')
 
 #-----------------------------Basic GUI elements-----------------------------
 #Define a consistent UI color
 axcolor = 'white'
 
 #Define a new "axis" for the slider
-rot_ax = plt.axes([0.20, 0.12, 0.65, 0.03], axisbg=axcolor)
+rot_ax = plt.axes([0.20, 0.16, 0.65, 0.03], axisbg=axcolor)
 
 #Slider ranges from -180..180, initialized at the user's value (default 0.0).
-rot_slider = Slider(rot_ax, 'Rotation angle', -180.0, 180.0, valinit=rotation_angle)
+rot_slider = Slider(rot_ax, 'Rotation angle (deg)', -180.0, 180.0, valinit=overlay.rotation)
+rot_slider.label.set_size(10)
+rot_slider.label.set_horizontalalignment('right')
 
-pitch_ax = plt.axes([0.20, 0.08, 0.65,0.03], axisbg=axcolor)
-pitch_slider = Slider(pitch_ax, 'Pitch angle', 0.001, 45.00, valinit=pitch_angle)
+pitch_ax = plt.axes([0.20, 0.12, 0.65,0.03], axisbg=axcolor)
+pitch_slider = Slider(pitch_ax, 'Pitch angle (deg)', 0.001, 45.00, valinit=overlay.pitch)
+pitch_slider.label.set_size(10)
+pitch_slider.label.set_horizontalalignment('right')
+
+
+theta_ax = plt.axes([0.20, 0.08, 0.65,0.03], axisbg=axcolor)
+theta_slider = Slider(theta_ax, 'Minimum Theta (rad)', 0.0, 3*np.pi, valinit=overlay.theta_min)
+theta_slider.label.set_size(10)
+theta_slider.label.set_horizontalalignment('right')
+
 
 #Subroutine update
 #   Define a set of actions to take when the slider is modified
@@ -191,30 +310,34 @@ pitch_slider = Slider(pitch_ax, 'Pitch angle', 0.001, 45.00, valinit=pitch_angle
 #   slow. As such, it's best to click on the slider rather than click and drag.
 #   Changing the rotation can also make the image jump, but the built-in cursor can fix that.
 def Update(val):
-    #Clear the axes
-    ax.cla()
-    global rotation_angle
-    rotation_angle = rot_slider.val
-    global pitch_angle
-    pitch_angle = pitch_slider.val
-    SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality,line_color)
+    
+    overlay.setRotation(rot_slider.val)
+    overlay.setPitch(pitch_slider.val)
+    overlay.setTheta(theta_slider.val)
+    
+    x,y = SpiralArms(overlay, gal_image)
+    overlay.lines.set_xdata(x)
+    overlay.lines.set_ydata(y)
+    
     #Force the buffer to flip
     fig.canvas.draw_idle()
 #End subroutine
 
 rot_slider.on_changed(Update)
 pitch_slider.on_changed(Update)
+theta_slider.on_changed(Update)
 
 #Define a new "axis" for the reset button
 reset_ax = plt.axes([0.47, 0.03, 0.15, 0.04])
 reset_button = Button(reset_ax, 'Reset sliders', color=axcolor, hovercolor='lightsteelblue')
 
 #Subroutine reset
-#   Define actions to take when  resetbutton is pressed
+#   Define actions to take when  reset button is pressed
 def Reset(event):
     #Reset sliders to initial values
     rot_slider.reset()
     pitch_slider.reset()
+    theta_slider.reset()
 #End subroutine
 
 reset_button.on_clicked(Reset)
@@ -228,7 +351,7 @@ save_button = Button(save_ax, 'Save', color=axcolor, hovercolor='lightsteelblue'
 def Save(event):
     #Find the extent of the subplot that shows the image
     extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-    fig.savefig(gal_file+'_'+str(pitch_angle)+'degrees'+'.png', bbox_inches=extent)
+    fig.savefig(gal_image.name+'_'+str(overlay.pitch)+'degrees'+'.png', bbox_inches=extent)
 #End subroutine
 
 save_button.on_clicked(Save)
@@ -241,15 +364,26 @@ fig.text(0.10,0.76,"Colorscale", fontsize='12',ha='center')
 #Subroutine ScaleChange
 #   Allow the user to swap between linear/log scales on the fly
 def ScaleChange(label):
-    global colorscale_option
+    
     if label == 'linear':
-        colorscale_option = 'n'
+        gal_image.setColorscale('n')
     elif label == 'log grey':
-        colorscale_option = 'yg'
+        gal_image.setColorscale('yg')
     elif label == 'log seismic':
-        colorscale_option = 'ys'
+        gal_image.setColorscale('ys')
     ax.cla()
-    SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality,line_color)
+
+    ImagePlot(gal_image)
+    x,y = SpiralArms(overlay, gal_image)
+    overlay.lines, = ax.plot(x, y, '.', ms = 5.0)
+    if overlay.color == 'red':
+        plt.setp(overlay.lines, color = 'red')
+    elif overlay.color == 'black':
+        plt.setp(overlay.lines, color = 'black')
+    elif overlay.color == 'white':
+        plt.setp(overlay.lines, color = 'white')
+    else:
+        plt.setp(overlay.lines, color = 'blue')
     fig.canvas.draw_idle()
 #End subroutine
 
@@ -263,13 +397,16 @@ fig.text(0.8855,0.46,"Chirality", fontsize='12',ha='center')
 #Subroutine ChirChange
 #   Allow the user to change the overlay's chirality on the fly
 def ChirChange(label):
-    global chirality
+    
     if label == 'CCW (-)':
-        chirality = 'CCW'
+        overlay.setChirality('CCW')
     elif label == 'CW (+)':
-        chirality = 'CW'
-    ax.cla()
-    SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality,line_color)
+        overlay.setChirality('CW')
+
+    x,y = SpiralArms(overlay, gal_image)
+    overlay.lines.set_xdata(x)
+    overlay.lines.set_ydata(y)
+
     fig.canvas.draw_idle()
 #End subroutine
 
@@ -283,10 +420,13 @@ fig.text(0.8855,0.76,"Number of Arms", fontsize='12',ha='center')
 #Subroutine ArmChange
 #   Allow the user to change the number of overlaid arms on the fly
 def ArmChange(label):
-    global arm_number
-    arm_number = int(label)
-    ax.cla()
-    SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality,line_color)
+    
+    overlay.setNumArms(int(label))
+    
+    x,y = SpiralArms(overlay, gal_image)
+    overlay.lines.set_xdata(x)
+    overlay.lines.set_ydata(y)
+    
     fig.canvas.draw_idle()
 #End subroutine
 
@@ -300,10 +440,18 @@ fig.text(0.10,0.56,"Line Color", fontsize='12',ha='center')
 #Subroutine ColorChange
 #   Allow the user to change the color of overlaid arms on the fly
 def ColorChange(label):
-    global line_color
-    line_color = label
-    ax.cla()
-    SpiralPlot(galaxy_image,arm_number,pitch_angle,rotation_angle,colorscale_option,chirality,line_color)
+
+    overlay.setColor(label)
+    
+    if overlay.color == 'red':
+        plt.setp(overlay.lines, color = 'red')
+    elif overlay.color  == 'black':
+        plt.setp(overlay.lines, color = 'black')
+    elif overlay.color  == 'white':
+        plt.setp(overlay.lines, color = 'white')
+    else:
+        plt.setp(overlay.lines, color = 'blue')
+    
     fig.canvas.draw_idle()
 #End subroutine
 

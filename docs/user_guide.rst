@@ -711,7 +711,7 @@ Manual Method
 Automated Method
 ----------------
 
-1. cd to the directory containing all your ``_m1``, ``_m2``, etc., files and place ``slope_change.py``, ``average_pitch.py`` and ``overlay-test_cmap-scales.py`` in the same folder.  Edit these scripts to reflect your file-naming scheme, etc.
+1. cd to the directory containing all your ``_m1``, ``_m2``, etc., files and place ``slope_change.py``, ``average_pitch.py`` and ``spiral_overlay.py`` in the same folder.  Edit these scripts to reflect your file-naming scheme, etc.
 
 2. Determine the number of arms.
 
@@ -736,18 +736,18 @@ Automated Method
 
         python spiral_overlay.py <filename>
 
-or::
+	or:
 
         python spiral_overlay.py
 
 where ``<filename>`` is a ``.fit`` or ``.fits`` file. If a filename is not passed as a command line argument,
 the program will prompt for one.
 
-A GUI window will appear with options to adjust the pitch angle, rotation, number of arms and chirality of
-the overlay, along with the colorscale of the image (linear, logarithmic with grey colormap, or logarithmic
-with Seismic colormap).
+A GUI window will appear with options to adjust the pitch angle, rotation, minimum polar angle, number of arms, and chirality of
+the overlay, along with the colorscale of the image (linear, logarithmic with grey sequential colormap, or logarithmic
+with seismic diverging colormap).
 
-The color of the overlaid arms can be changed from default multicolor to black, white, or red.
+The color of the overlaid arms can be changed from default blue to black, white, or red.
 
 The overlay can be saved by clicking the floppy disk icon in the lower toolbar, which will save the entire window, or the ``Save`` button
 at the lower right of the image, which will save only the central overlay as a ``.png`` tagged with the pitch angle and image name.

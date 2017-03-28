@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 '''
     spiral_overlay.py
     
@@ -54,7 +52,8 @@
                         the save button below the sliders.
 '''
 
-#-----------------------------Program begins----------------------------
+#-----------------------------code begins----------------------------
+#!/usr/bin/python
 from pylab import *
 import numpy as np
 import glob
@@ -73,10 +72,10 @@ DEFAULT_COLORSCALE = 'n' #n is linear, yg is logarithmic grey scale, ys is logar
 line_color = '' #Options: '' for default, 'red', 'black', 'white'
 
 class Spiral():
-    """
+    '''
         Spiral
         A class interface to hold parameters related to the spiral overlay.
-    """
+    '''
 
     def __init__(self, num_arms, pitch, chirality, rotation, theta_min, color):
         self.num_arms = num_arms
@@ -86,60 +85,60 @@ class Spiral():
         self.theta_min = theta_min
         self.color = color
         return
-    #end subroutine
+    #end definition
 
     def setNumArms(self, num_arms):
         self.num_arms = num_arms
         return
-    #end subroutine
+    #end definition
 
     def setPitch(self, pitch):
         self.pitch = pitch
         return
-    #end subroutine
+    #end definition
     
     def setChirality(self, chirality):
         self.chirality = chirality
         return
-    #end subroutine
+    #end definition
 
     def setRotation(self, rotation):
         self.rotation = rotation
         return
-    #end subroutine
+    #end definition
 
     def setTheta(self, theta_min):
         self.theta_min = theta_min
         return
-    #end subroutine
+    #end definition
 
     def setColor(self, color):
         self.color = color
         return
-    #end subroutine
+    #end definition
 
 #end class definition
 
 class Image():
-    """
+    '''
         Image
         A class interface to hold data from and related to the galaxy image being 
         overlaid.
-    """
+    '''
     def __init__(self, name):
         self.name = name
         return
-    #end subroutine
+    #end definition
 
     def setData(self, data):
         self.data = data
         return
-    #end subroutine
+    #end definition
 
     def setColorscale(self, colorscale):
         self.colorscale = colorscale
         return
-    #end subroutine
+    #end definition
 
 #end class definition
 
@@ -154,12 +153,15 @@ if len(sys.argv) != 1:
         print("Could not parse command line argument")
         print(__doc__)
         sys.exit()
+    #end if
+
 else:
     print "Available images in this directory: "
     #If you're using python 3.5+ you can easily make this search subdirectories recursively
     for filename in (glob.glob("*.fit") + glob.glob("*.fits")):
         print filename
     gal_image = Image(str(raw_input("\nEnter filename for galaxy image.\n> ")))
+#end if
 
 try:
     #pull the pixel values and save them as a uint8 numpy array
@@ -184,9 +186,10 @@ elif gal_image.colorscale == 'yg':
     colorscale_flag = 1
 elif gal_image.colorscale == 'ys':
     colorscale_flag = 2
+#end if
 
-#Subroutine ImagePlot
-#   A subroutine to handle image renormalization, color mapping, and display
+#ImagePlot
+#   A function to handle image renormalization, color mapping, and display
 def ImagePlot(image):
     if str(image.colorscale)=='n':
         remap = Normalize()
@@ -200,12 +203,13 @@ def ImagePlot(image):
         remap = LogNorm()
         remap.autoscale(image.data)
         ax.imshow(image.data, cmap='seismic', norm=remap, origin='lower')
-#end subroutine
+    #end if
+#end definition
 
 #-----------------------------Spiral arms-----------------------------
 
-#Subroutine SpiralArms
-#   A subroutine to plot the spiral on top of the image.
+# SpiralArms
+#   A function to plot the spiral on top of the image.
 #   Takes an object of the Spiral class and an object of the Image class (see above)
 def SpiralArms(spiral, image):
     
@@ -243,14 +247,16 @@ def SpiralArms(spiral, image):
             x = (-a*np.cos(theta+phase)*np.exp(b*theta) + gal_pixel_radius)
         elif spiral.chirality == 'CW':
             x = (a*np.cos(theta+phase)*np.exp(b*theta) + gal_pixel_radius)
+        #end if
         
         y = (a*np.sin(theta+phase)*np.exp(b*theta) + gal_pixel_radius)
         all_x = np.append(all_x, x)
         all_y = np.append(all_y, y)
+    #end loop
 
     return all_x, all_y
 
-#End subroutine
+#end definition
 
 
 #The flags here control which button starts out pressed
@@ -262,6 +268,7 @@ elif DEFAULT_PITCH < 0:
     chirality = 'CW'    #If the pitch is negative, flip the chirality and drop the sign
     chir_flag = 1
     pitch = np.abs(DEFAULT_PITCH)
+#end if
 
 #Instantiate a Spiral object
 overlay = Spiral(DEFAULT_ARMS, pitch, chirality, DEFAULT_ROTATION, DEFAULT_THETA_MIN, line_color)
@@ -279,6 +286,7 @@ elif overlay.color == 'white':
     plt.setp(overlay.lines, color = 'white')
 else:
     plt.setp(overlay.lines, color = 'blue')
+#end if
 
 #-----------------------------Basic GUI elements-----------------------------
 #Define a consistent UI color
@@ -304,7 +312,7 @@ theta_slider.label.set_size(10)
 theta_slider.label.set_horizontalalignment('right')
 
 
-#Subroutine update
+# update
 #   Define a set of actions to take when the slider is modified
 #   Note that since the image and all the arms have to be redrawn, this function is fairly
 #   slow. As such, it's best to click on the slider rather than click and drag.
@@ -321,7 +329,7 @@ def Update(val):
     
     #Force the buffer to flip
     fig.canvas.draw_idle()
-#End subroutine
+#end definition
 
 rot_slider.on_changed(Update)
 pitch_slider.on_changed(Update)
@@ -331,14 +339,14 @@ theta_slider.on_changed(Update)
 reset_ax = plt.axes([0.47, 0.03, 0.15, 0.04])
 reset_button = Button(reset_ax, 'Reset sliders', color=axcolor, hovercolor='lightsteelblue')
 
-#Subroutine reset
+# Reset
 #   Define actions to take when  reset button is pressed
 def Reset(event):
     #Reset sliders to initial values
     rot_slider.reset()
     pitch_slider.reset()
     theta_slider.reset()
-#End subroutine
+#end definition
 
 reset_button.on_clicked(Reset)
 
@@ -346,13 +354,13 @@ reset_button.on_clicked(Reset)
 save_ax = plt.axes([0.80, 0.03, 0.1, 0.04])
 save_button = Button(save_ax, 'Save', color=axcolor, hovercolor='lightsteelblue')
 
-#Subroutine save
+# Save
 #   Define actions to take when save button is pressed
 def Save(event):
     #Find the extent of the subplot that shows the image
     extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
     fig.savefig(gal_image.name+'_'+str(overlay.pitch)+'degrees'+'.png', bbox_inches=extent)
-#End subroutine
+#end definition
 
 save_button.on_clicked(Save)
 
@@ -361,7 +369,7 @@ log_ax = plt.axes([0.025, 0.60, 0.17, 0.15], axisbg=axcolor)
 log_radio = RadioButtons(log_ax, ('linear','log grey', 'log seismic'), active=colorscale_flag)
 fig.text(0.10,0.76,"Colorscale", fontsize='12',ha='center')
 
-#Subroutine ScaleChange
+# ScaleChange
 #   Allow the user to swap between linear/log scales on the fly
 def ScaleChange(label):
     
@@ -371,6 +379,7 @@ def ScaleChange(label):
         gal_image.setColorscale('yg')
     elif label == 'log seismic':
         gal_image.setColorscale('ys')
+    #end if
     ax.cla()
 
     ImagePlot(gal_image)
@@ -384,8 +393,9 @@ def ScaleChange(label):
         plt.setp(overlay.lines, color = 'white')
     else:
         plt.setp(overlay.lines, color = 'blue')
+    #end if
     fig.canvas.draw_idle()
-#End subroutine
+#end definition
 
 log_radio.on_clicked(ScaleChange)
 
@@ -394,7 +404,7 @@ chir_ax = plt.axes([0.8155, 0.30, 0.15, 0.15], axisbg=axcolor)
 chir_radio = RadioButtons(chir_ax, ('CCW (-)','CW (+)'), active=chir_flag)
 fig.text(0.8855,0.46,"Chirality", fontsize='12',ha='center')
 
-#Subroutine ChirChange
+# ChirChange
 #   Allow the user to change the overlay's chirality on the fly
 def ChirChange(label):
     
@@ -402,13 +412,14 @@ def ChirChange(label):
         overlay.setChirality('CCW')
     elif label == 'CW (+)':
         overlay.setChirality('CW')
-
+    #end if
+    
     x,y = SpiralArms(overlay, gal_image)
     overlay.lines.set_xdata(x)
     overlay.lines.set_ydata(y)
 
     fig.canvas.draw_idle()
-#End subroutine
+#end definition
 
 chir_radio.on_clicked(ChirChange)
 
@@ -417,7 +428,7 @@ arm_ax = plt.axes([0.8255, 0.50, 0.12, 0.25], axisbg=axcolor)
 arm_radio = RadioButtons(arm_ax, ('1','2','3','4','5','6'), active=(DEFAULT_ARMS-1))
 fig.text(0.8855,0.76,"Number of Arms", fontsize='12',ha='center')
 
-#Subroutine ArmChange
+# ArmChange
 #   Allow the user to change the number of overlaid arms on the fly
 def ArmChange(label):
     
@@ -428,7 +439,7 @@ def ArmChange(label):
     overlay.lines.set_ydata(y)
     
     fig.canvas.draw_idle()
-#End subroutine
+#end definition
 
 arm_radio.on_clicked(ArmChange)
 
@@ -437,7 +448,7 @@ color_ax = plt.axes([0.032, 0.30, 0.12, 0.25], axisbg=axcolor)
 color_radio = RadioButtons(color_ax, ('default','red','black','white'), active=0)
 fig.text(0.10,0.56,"Line Color", fontsize='12',ha='center')
 
-#Subroutine ColorChange
+# ColorChange
 #   Allow the user to change the color of overlaid arms on the fly
 def ColorChange(label):
 
@@ -451,12 +462,13 @@ def ColorChange(label):
         plt.setp(overlay.lines, color = 'white')
     else:
         plt.setp(overlay.lines, color = 'blue')
+    #end if
     
     fig.canvas.draw_idle()
-#End subroutine
+#end definition
 
 color_radio.on_clicked(ColorChange)
 
 plt.show()
 
-#-----------------------------End Program-----------------------------
+#-----------------------------end of file-----------------------------

@@ -10,8 +10,6 @@
 .. todo::
 
 	- Clean up this README
-	- Rename overlay.py to spiral_overlay.py
-	- Add overlay.py instructions.
 	- Change tabs to 4 spaces everywhere.
 
 `2dfft_utils` is a collection of utilities that make processing 2DFFT pitch
